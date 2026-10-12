@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonic Spectrum Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --dark-navy: #042157;
+            --neon-cyan: #16fdfc;
+            --light-lime: #bae793;
+        }
+
+        body {
+            background-color: var(--dark-navy);
+            color: var(--light-lime);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Custom Focus Ring for Accessibility */
+        *:focus-visible {
+            outline: 3px solid var(--neon-cyan) !important;
+            outline-offset: 4px !important;
+            border-radius: 4px;
+        }
+
+        /* Custom Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: var(--light-lime);
+            cursor: pointer;
+            margin-top: -10px; /* Center thumb on track */
+            box-shadow: 0 0 10px rgba(186, 231, 147, 0.5);
+            transition: transform 0.1s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: rgba(22, 253, 252, 0.3); /* Dimmed cyan for track */
+            border-radius: 4px;
+        }
+
+        input[type=range]:focus::-webkit-slider-runnable-track {
+            background: rgba(22, 253, 252, 0.5);
+        }
+
+        /* Standard Mozilla styling for range */
+        input[type=range]::-moz-range-thumb {
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: var(--light-lime);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(186, 231, 147, 0.5);
+        }
+        input[type=range]::-moz-range-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: rgba(22, 253, 252, 0.3);
+            border-radius: 4px;
+        }
+
+        /* Toggle Button Styles */
+        .toggle-btn {
+            background-color: transparent;
+            border: 2px solid var(--light-lime);
+            color: var(--light-lime);
+            transition: all 0.2s ease;
+        }
+        
+        .toggle-btn[aria-pressed="true"] {
+            background-color: var(--light-lime);
+            color: var(--dark-navy);
+            box-shadow: 0 0 15px rgba(186, 231, 147, 0.6);
+        }
+
+        /* Play/Mute Button Custom Style */
+        .play-btn {
+            background-color: var(--neon-cyan);
+            color: var(--dark-navy);
+            transition: all 0.3s ease;
+        }
+        .play-btn:hover {
+            box-shadow: 0 0 20px rgba(22, 253, 252, 0.6);
+        }
+        .play-btn[aria-pressed="true"] {
+            background-color: #ff4757; /* Stop state red */
+            color: white;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.6);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 lg:p-8">
+
+    <!-- Coursera User Tutorial: Step-by-Step Guided Walkthrough -->
+    <div class="w-full max-w-7xl mx-auto mb-6 bg-white/5 p-6 rounded-xl border border-[#16fdfc]/30 shadow-lg">
+        <h2 class="text-xl font-bold mb-4 text-[#16fdfc]">Quick Tutorial</h2>
+        <p class="mb-4 text-sm text-[var(--light-lime)]">Welcome to the Harmonic Spectrum Visualizer. Follow these simple steps to explore how harmonics shape the sound you hear:</p>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-[var(--light-lime)] opacity-90">
+            <li><strong class="text-[#16fdfc]">Step 1: Start the Audio Engine</strong> Click the Start Audio Engine button at the top left. Make sure your device volume is set to a comfortable level. You will hear a steady tone representing a fundamental frequency.</li>
+            <li><strong class="text-[#16fdfc]">Step 2: Adjust the Base Pitch</strong> Use the Fundamental Frequency slider to change the base pitch from 100 Hz to 1000 Hz. Notice how the visual wave on the Oscilloscope speeds up or slows down while the main bar on the Spectrum Analyzer shifts position.</li>
+            <li><strong class="text-[#16fdfc]">Step 3: Morph Harmonic Content (Saxophone vs Clarinet)</strong> Move the Odd versus Even Harmonic Balance slider. When shifted all the way to Full Series, you hear a rich timbre containing all integer harmonics, similar to a saxophone. When shifted to Odd Harmonics Only, even-numbered bars vanish from the spectrum analyzer, producing a hollow tone similar to a clarinet or square wave.</li>
+            <li><strong class="text-[#16fdfc]">Step 4: Test Inharmonicity</strong> Toggle the Inharmonicity button on. Notice how the upper partials shift away from whole numbers, instantly changing the warm tone into a metallic, bell-like timbre.</li>
+            <li><strong class="text-[#16fdfc]">Step 5: Mute or Stop Audio</strong> Click Stop Audio Engine at any time to pause sound output. You can click Start Audio Engine again whenever you are ready to resume exploring.</li>
+        </ul>
+    </div>
+
+    <main class="w-full max-w-7xl flex flex-col lg:flex-row gap-8 items-stretch h-full">
+        
+        <!-- Controls Section -->
+        <section aria-labelledby="controls-heading" class="flex-1 bg-opacity-10 bg-white rounded-xl p-6 border border-[#16fdfc]/30 shadow-2xl flex flex-col">
+            <h1 id="controls-heading" class="text-2xl font-bold mb-6 text-[#16fdfc] tracking-wide uppercase border-b border-[#16fdfc]/30 pb-2">
+                Harmonic Controls
+            </h1>
+            
+            <div class="space-y-8 flex-1">
+                <!-- Power/Play Control -->
+                <div class="flex flex-col gap-3">
+                    <label class="font-semibold text-lg tracking-wide uppercase text-sm">System Power</label>
+                    <button id="btn-play" tabindex="0" aria-pressed="false" class="play-btn font-bold py-3 px-6 rounded-lg text-lg uppercase tracking-wider w-full">
+                        Start Audio Engine
+                    </button>
+                    <p class="text-xs opacity-70">Warning: Contains synthetic audio. Start at moderate volume.</p>
+                </div>
+
+                <!-- Fundamental Frequency Slider -->
+                <div class="flex flex-col gap-3">
+                    <div class="flex justify-between">
+                        <label for="freq-slider" class="font-semibold tracking-wide uppercase text-sm">Fundamental Frequency (Hz)</label>
+                        <span id="freq-val" class="font-mono text-[#16fdfc]">440 Hz</span>
+                    </div>
+                    <input type="range" id="freq-slider" tabindex="0" 
+                           role="slider" aria-label="Fundamental Frequency" 
+                           aria-valuemin="100" aria-valuemax="1000" aria-valuenow="440" value="440" min="100" max="1000" step="1">
+                    <p class="text-xs opacity-80">Adjusts the base pitch (f) of the sound wave.</p>
+                </div>
+
+                <!-- Odd vs Even Harmonic Balance -->
+                <div class="flex flex-col gap-3">
+                    <div class="flex justify-between">
+                        <label for="balance-slider" class="font-semibold tracking-wide uppercase text-sm">Harmonic Balance</label>
+                        <span id="balance-val" class="font-mono text-[#16fdfc]">Full Series</span>
+                    </div>
+                    <div class="flex justify-between text-xs text-[#16fdfc] mb-1">
+                        <span>All (Sawtooth)</span>
+                        <span>Odd Only (Square)</span>
+                    </div>
+                    <input type="range" id="balance-slider" tabindex="0" 
+                           role="slider" aria-label="Harmonic Amplitude" 
+                           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" value="0" min="0" max="100" step="1">
+                    <p class="text-xs opacity-80">Morphs between integer series (f, 2f, 3f...) and odd-only (f, 3f, 5f...).</p>
+                </div>
+
+                <!-- Inharmonicity Toggle -->
+                <div class="flex flex-col gap-3">
+                    <label class="font-semibold tracking-wide uppercase text-sm">Inharmonicity (Metallic/Bell)</label>
+                    <button id="btn-inharm" tabindex="0" aria-pressed="false" class="toggle-btn font-bold py-3 px-6 rounded-lg uppercase tracking-wider w-full">
+                        Enable Non-Integer Partials
+                    </button>
+                    <p class="text-xs opacity-80">Shifts upper partials to non-integer multiples (e.g., 2.35f).</p>
+                </div>
+            </div>
+            
+            <!-- ARIA Live region for screen readers describing timbre -->
+            <div aria-live="polite" class="mt-6 p-4 rounded-lg bg-[#16fdfc]/10 border border-[#16fdfc]/30 text-sm italic">
+                <span class="font-bold not-italic block mb-1 text-[#16fdfc]">Current Timbre:</span>
+                <span id="timbre-desc">Audio engine is inactive. Press Start to initialize synthesis.</span>
+            </div>
+        </section>
+
+        <!-- Visualizer Section -->
+        <section aria-labelledby="visualizer-heading" class="flex-[2] bg-opacity-10 bg-black rounded-xl border border-[#16fdfc]/30 shadow-2xl flex flex-col relative overflow-hidden h-[600px] lg:h-auto">
+            <h2 id="visualizer-heading" class="sr-only">Visual Outputs</h2>
+            
+            <!-- Canvas Container -->
+            <div class="w-full h-full relative" id="canvas-container">
+                <canvas id="visualizer-canvas" class="block w-full h-full"></canvas>
+                
+                <!-- Display Overlays -->
+                <div class="absolute top-4 left-4 font-mono text-xs text-[#16fdfc] bg-[#042157]/80 px-2 py-1 rounded">
+                    DISPLAY 1: OSCILLOSCOPE (TIME DOMAIN)
+                </div>
+                <div class="absolute top-[52%] left-4 font-mono text-xs text-[#16fdfc] bg-[#042157]/80 px-2 py-1 rounded">
+                    DISPLAY 2: FFT SPECTRUM (FREQ DOMAIN)
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // DOM Elements
+        const btnPlay = document.getElementById('btn-play');
+        const btnInharm = document.getElementById('btn-inharm');
+        const sliderFreq = document.getElementById('freq-slider');
+        const sliderBalance = document.getElementById('balance-slider');
+        
+        const valFreq = document.getElementById('freq-val');
+        const valBalance = document.getElementById('balance-val');
+        const timbreDesc = document.getElementById('timbre-desc');
+        const canvas = document.getElementById('visualizer-canvas');
+        const canvasContainer = document.getElementById('canvas-container');
+        const ctx = canvas.getContext('2d');
+
+        // Audio System State
+        let audioCtx;
+        let masterGain;
+        let analyser;
+        let isPlaying = false;
+        
+        // Additive Synthesis Engine
+        const NUM_PARTIALS = 16;
+        let partials = [];
+        
+        // Inharmonic ratios chosen to sound slightly metallic/bell-like
+        const inharmonicRatios = [1.0, 2.35, 3.7, 4.9, 6.1, 7.5, 8.8, 10.2, 11.7, 13.1, 14.6, 16.2, 17.8, 19.5, 21.1, 22.9];
+
+        // Initialization of Audio Context and Synthesis Engine
+        async function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Setup master out and analyser
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0; // Start muted to prevent popping
+            
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 2048;
+            analyser.smoothingTimeConstant = 0.8;
+            
+            masterGain.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            
+            // Create Oscillator Bank
+            for (let i = 0; i < NUM_PARTIALS; i++) {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'sine'; // Fundamental building block
+                osc.connect(gain);
+                gain.connect(masterGain);
+                
+                osc.start();
+                partials.push({ osc, gain });
+            }
+            
+            masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            masterGain.gain.linearRampToValueAtTime(1.0, audioCtx.currentTime + 0.05);
+        }
+
+        function updateSynthesis() {
+            if (!isPlaying || !audioCtx) return;
+            
+            const f = parseFloat(sliderFreq.value);
+            const balance = parseFloat(sliderBalance.value) / 100; // 0 to 1
+            const isInharmonic = btnInharm.getAttribute('aria-pressed') === 'true';
+
+            // Base overall volume down as we add more partials to prevent hard clipping
+            const globalAmpScale = 0.25; 
+            
+            partials.forEach((p, i) => {
+                const n = i + 1; // 1-based partial index
+                
+                // Frequency calculation
+                const freq = isInharmonic ? f * inharmonicRatios[i] : f * n;
+                
+                // Amplitude calculation
+                let amp = 0;
+                if (n % 2 !== 0) {
+                    // Odd partials (1, 3, 5...) maintain full relative amplitude (1/n)
+                    amp = 1 / n;
+                } else {
+                    // Even partials (2, 4, 6...) are attenuated by the balance slider
+                    amp = (1 / n) * (1 - balance);
+                }
+                
+                // Apply scaling
+                amp *= globalAmpScale;
+                
+                // Smoothly update parameters to avoid clicks
+                p.osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
+                p.gain.gain.setTargetAtTime(amp, audioCtx.currentTime, 0.05);
+            });
+            
+            updateTimbreDescription(balance, isInharmonic);
+        }
+
+        function updateTimbreDescription(balance, isInharmonic) {
+            let desc = "";
+            if (isInharmonic) {
+                desc = "Metallic, inharmonic timbre with non-integer upper partials creating a bell-like, dissonant sound.";
+            } else if (balance > 0.75) {
+                desc = "Hollow, square-wave-like timbre with dominant odd harmonics and highly attenuated even harmonics.";
+            } else if (balance < 0.25) {
+                desc = "Rich, sawtooth-like harmonic series containing a full spectrum of both even and odd overtones.";
+            } else {
+                desc = "Hybrid timbre featuring a full fundamental with partially attenuated even harmonics.";
+            }
+            
+            // Update aria-live region only if changed to avoid spamming screen reader
+            if (timbreDesc.innerText !== desc) {
+                timbreDesc.innerText = desc;
+            }
+        }
+
+        // Play/Stop Button
+        btnPlay.addEventListener('click', async () => {
+            if (!isPlaying) {
+                if (!audioCtx) await initAudio();
+                if (audioCtx.state === 'suspended') {
+                    masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                    masterGain.gain.linearRampToValueAtTime(1.0, audioCtx.currentTime + 0.05);
+                    await audioCtx.resume();
+                }
+                
+                isPlaying = true;
+                btnPlay.setAttribute('aria-pressed', 'true');
+                btnPlay.innerText = "Stop Audio Engine";
+                updateSynthesis();
+                drawVisualizer(); // Start animation loop
+            } else {
+                isPlaying = false;
+                btnPlay.setAttribute('aria-pressed', 'false');
+                btnPlay.innerText = "Start Audio Engine";
+                if (audioCtx) {
+                    masterGain.gain.setValueAtTime(masterGain.gain.value, audioCtx.currentTime);
+                    masterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.05);
+                    setTimeout(() => audioCtx.suspend(), 100);
+                }
+                timbreDesc.innerText = "Audio engine is inactive.";
+            }
+        });
+
+        // Inharmonic Toggle
+        btnInharm.addEventListener('click', () => {
+            const isPressed = btnInharm.getAttribute('aria-pressed') === 'true';
+            btnInharm.setAttribute('aria-pressed', !isPressed ? 'true' : 'false');
+            updateSynthesis();
+        });
+
+        // Sliders
+        sliderFreq.addEventListener('input', (e) => {
+            const val = e.target.value;
+            valFreq.innerText = `${val} Hz`;
+            sliderFreq.setAttribute('aria-valuenow', val);
+            updateSynthesis();
+        });
+
+        sliderBalance.addEventListener('input', (e) => {
+            const val = e.target.value;
+            sliderBalance.setAttribute('aria-valuenow', val);
+            if (val == 0) valBalance.innerText = "Full Series";
+            else if (val == 100) valBalance.innerText = "Odd Only";
+            else valBalance.innerText = `Balance: ${val}%`;
+            updateSynthesis();
+        });
+
+        
+        function resizeCanvas() {
+            canvas.width = canvasContainer.clientWidth;
+            canvas.height = canvasContainer.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function drawVisualizer() {
+            if (!isPlaying) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
+            requestAnimationFrame(drawVisualizer);
+            
+            const w = canvas.width;
+            const h = canvas.height;
+            const halfH = h / 2;
+            
+            // Clear background with Dark Navy
+            ctx.fillStyle = '#042157';
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw Neon Cyan Grid
+            ctx.strokeStyle = 'rgba(22, 253, 252, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            // Vertical grid lines
+            for (let x = 0; x <= w; x += 50) {
+                ctx.moveTo(x, 0); ctx.lineTo(x, h);
+            }
+            // Horizontal grid lines
+            for (let y = 0; y <= h; y += 50) {
+                ctx.moveTo(0, y); ctx.lineTo(w, y);
+            }
+            ctx.stroke();
+
+            // Center divider line
+            ctx.strokeStyle = 'rgba(22, 253, 252, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, halfH);
+            ctx.lineTo(w, halfH);
+            ctx.stroke();
+
+            // Setup audio data arrays
+            const bufferLength = analyser.frequencyBinCount;
+            const timeData = new Uint8Array(bufferLength);
+            const freqData = new Uint8Array(bufferLength);
+            
+            analyser.getByteTimeDomainData(timeData);
+            analyser.getByteFrequencyData(freqData);
+
+            // 1. Draw Oscilloscope (Top Half)
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#16fdfc';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#16fdfc';
+            ctx.beginPath();
+            
+            const sliceWidth = w * 1.0 / bufferLength;
+            let x = 0;
+            
+            for(let i = 0; i < bufferLength; i++) {
+                const v = timeData[i] / 128.0; // 0 to 2
+                // Map to top half of canvas with some padding
+                const y = (v * (halfH / 2.5)) + (halfH / 4); 
+                
+                if(i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                x += sliceWidth;
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // 2. Draw FFT Bar Graph (Bottom Half)
+            ctx.fillStyle = '#16fdfc';
+            // We only need the lower portion of the frequency spectrum usually
+            const maxFreqBin = Math.floor(bufferLength * 0.4); 
+            const barWidth = (w / maxFreqBin) * 2.5;
+            let barX = 0;
+            
+            for(let i = 0; i < maxFreqBin; i++) {
+                const barHeight = (freqData[i] / 255) * (halfH * 0.85); // Scale height to fit bottom half
+                
+                // Draw bar starting from the bottom of the canvas
+                ctx.fillRect(barX, h - barHeight, barWidth - 1, barHeight);
+                
+                barX += barWidth;
+            }
+        }
+    </script>
+</body>
+</html>
